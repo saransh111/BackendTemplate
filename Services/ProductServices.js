@@ -3,7 +3,7 @@ const Product = require('../Models/ProductModel');
 class ProductService {
     async addProduct(id2,productData) {
         const product = new Product(productData);
-        product.Added_by=id2+id2;
+        product.Added_by=id2;
         await product.save();
         return product;
     }
