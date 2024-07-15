@@ -2,9 +2,15 @@ const User = require('../Models/UserModel');
 
 class UserService {
     async addUser(userData) {
-        const user = new User(userData);
-        await user.save();
-        return user;
+        const user = await User.findBy({username});
+        if(user==null){
+            const user = new User(userData);
+            await user.save();
+            return user;
+        }
+        else{
+            return null;
+        }
     }
 
     async updateUser(id, userData) {

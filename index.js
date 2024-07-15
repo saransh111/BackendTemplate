@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const ProductService = require('./Services/ProductServices');
 const UserService = require('./Services/UserServices');
 const jwt = require("jsonwebtoken");
+const { UserSchema , ProductSchema} = require("./ZodSchema/ZodModel");
 
 const JWT_PASSWORD = process.env.REACT_APP_JWT_PASSWORD;
 
@@ -13,8 +14,16 @@ const userService = new UserService();
 
 app.use(express.json());
 
-async function validation_result(req, res, next) {
-    const validation_result = await userSchema.safeParse(req.body);
+async function validation_result_user(req, res, next) {
+    const validation_result = await UserSchema.safeParse(req.body);
+    if (!validation_result.success) {
+        res.status(400).json({ msg: "Invalid Email ID or Password" });
+    } else {
+        next();
+    }
+}
+async function validation_result_product(req, res, next) {
+    const validation_result = await ProductSchema.safeParse(req.body);
     if (!validation_result.success) {
         res.status(400).json({ msg: "Invalid Email ID or Password" });
     } else {
@@ -32,7 +41,7 @@ async function decode_jwt(req, res, next) {
     next();
 }
 
-app.post('/products', decode_jwt,async (req, res) => {
+app.post('/products',validation_result_product ,decode_jwt,async (req, res) => {
     const product = await productService.addProduct(req.body.id2,req.body)
     res.status(201).json(product);
 });
@@ -71,8 +80,11 @@ app.get('/products', decode_jwt,async (req, res) => {
 });
 
 // User routes
-app.post('/users', async (req, res) => {
+app.post('/users', validation_result_user ,async (req, res) => {
     const user = await userService.addUser(req.body);
+    if(!user) {
+        res.status(400).json({ message: 'User already exists' });
+    }
     const token = jwt.sign({ _id: user._id}, JWT_SECRET);
     res.set('Authorization', `Bearer ${token}`);
     res.status(201).json({ message: 'Login successful', username:user.username});
