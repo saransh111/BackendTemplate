@@ -12,8 +12,8 @@ class UserService {
         return user;
     }
 
-    async getUser(id) {
-        const user = await User.findById(id);
+    async getUser(username) {
+        const user = await User.findBy({username});
         return user;
     }
 

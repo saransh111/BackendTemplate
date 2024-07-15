@@ -2,6 +2,9 @@ const express = require('express');
 const mongoose = require('mongoose');
 const ProductService = require('./Services/ProductServices');
 const UserService = require('./Services/UserServices');
+const jwt = require("jsonwebtoken");
+
+const JWT_PASSWORD = process.env.REACT_APP_JWT_PASSWORD;
 
 const app = express();
 
@@ -10,15 +13,33 @@ const userService = new UserService();
 
 app.use(express.json());
 
+async function validation_result(req, res, next) {
+    const validation_result = await userSchema.safeParse(req.body);
+    if (!validation_result.success) {
+        res.status(400).json({ msg: "Invalid Email ID or Password" });
+    } else {
+        next();
+    }
+}
+async function decode_jwt(req, res, next) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ message: "Unauthorized" });
+    }
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_PASSWORD);
+    req.body.id2 = decoded._id;
+    next();
+}
 
-app.post('/products', async (req, res) => {
-    const product = await productService.addProduct(req.body);
+app.post('/products', decode_jwt,async (req, res) => {
+    const product = await productService.addProduct(req.body.id2,req.body)
     res.status(201).json(product);
 });
 
 
-app.put('/products/:id', async (req, res) => {
-    const product = await productService.updateProduct(req.params.id, req.body);
+app.put('/products/:id', decode_jwt,async (req, res) => {
+    const product = await productService.updateProduct(req.params.id,req.body.id2, req.body);
     if (product) {
         res.status(200).json(product);
     } else {
@@ -35,8 +56,8 @@ app.get('/products/:id', async (req, res) => {
     }
 });
 
-app.delete('/products/:id', async (req, res) => {
-    const result = await productService.removeProduct(req.params.id);
+app.delete('/products/:id',decode_jwt ,async (req, res) => {
+    const result = await productService.removeProduct(req.params.id,req.body.id2);
     if (result) {
         res.status(204).end();
     } else {
@@ -44,7 +65,7 @@ app.delete('/products/:id', async (req, res) => {
     }
 });
 
-app.get('/products', async (req, res) => {
+app.get('/products', decode_jwt,async (req, res) => {
     const products = await productService.getAllProducts();
     res.status(200).json(products);
 });
@@ -52,11 +73,13 @@ app.get('/products', async (req, res) => {
 // User routes
 app.post('/users', async (req, res) => {
     const user = await userService.addUser(req.body);
-    res.status(201).json(user);
+    const token = jwt.sign({ _id: user._id}, JWT_SECRET);
+    res.set('Authorization', `Bearer ${token}`);
+    res.status(201).json({ message: 'Login successful', username:user.username});
 });
 
-app.put('/users/:id', async (req, res) => {
-    const user = await userService.updateUser(req.params.id, req.body);
+app.put('/users', decode_jwt,async (req, res) => {
+    const user = await userService.updateUser(req.body.id2, req.body);
     if (user) {
         res.status(200).json(user);
     } else {
@@ -64,17 +87,19 @@ app.put('/users/:id', async (req, res) => {
     }
 });
 
-app.get('/users/:id', async (req, res) => {
-    const user = await userService.getUser(req.params.id);
+app.get('/users', async (req, res) => {
+    const user = await userService.getUser(req.username);
     if (user) {
-        res.status(200).json(user);
+        const token = jwt.sign({ _id: user._id}, JWT_SECRET);
+        res.set('Authorization', `Bearer ${token}`);
+        res.status(201).json({ message: 'Login successful', token });
     } else {
         res.status(404).json({ message: 'User not found' });
     }
 });
 
-app.delete('/users/:id', async (req, res) => {
-    const result = await userService.removeUser(req.params.id);
+app.delete('/users',decode_jwt, async (req, res) => {
+    const result = await userService.removeUser(req.body.id2);
     if (result) {
         res.status(204).end();
     } else {
@@ -82,7 +107,7 @@ app.delete('/users/:id', async (req, res) => {
     }
 });
 
-app.get('/users', async (req, res) => {
+app.get('/users',decode_jwt ,async (req, res) => {
     const users = await userService.getAllUsers();
     res.status(200).json(users);
 });

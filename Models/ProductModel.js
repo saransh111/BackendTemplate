@@ -1,6 +1,8 @@
 const mongoose =require("mongoose")
 
-mongoose.connect("mongodb+srv://saranshbhaduka111:AlwaysHappy%40121@firstproject.rfiuj9v.mongodb.net/Pesto")
+const apiUrl = process.env.REACT_APP_MONGO_URL;
+
+mongoose.connect(apiUrl)
     .then(()=>console.log("connected to db"))
 
 const ProductModel = new mongoose.Schema({
