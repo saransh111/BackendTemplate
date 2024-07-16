@@ -1,6 +1,10 @@
 const mongoose =require("mongoose")
 
-const apiUrl = process.env.REACT_APP_MONGO_URL;
+const dotenv = require("dotenv");
+
+dotenv.config();
+
+const apiUrl = process.env.REACT_APP_MONGO_URL
 
 mongoose.connect(apiUrl)
     .then(()=>console.log("connected to db"))
